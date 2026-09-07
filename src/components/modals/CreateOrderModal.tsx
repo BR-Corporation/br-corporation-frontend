@@ -61,6 +61,10 @@ export const CreateOrderModal = ({ isOpen, onClose }: CreateOrderModalProps) => 
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...formData.items]
     newItems[index] = { ...newItems[index], [field]: value }
+    if (field === 'product') {
+      const picked = products.find((p) => p.id === value)
+      if (picked) newItems[index].tax = picked.tax ?? 0
+    }
     setFormData({ ...formData, items: newItems })
   }
 
