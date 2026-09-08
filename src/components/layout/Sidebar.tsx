@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard,
@@ -16,6 +17,7 @@ import {
   ClipboardList,
   Sparkles,
   MessageCircle,
+  X,
 } from 'lucide-react'
 
 const navItems = {
@@ -66,24 +68,50 @@ const navItems = {
   ],
 }
 
-export const Sidebar = () => {
+interface SidebarProps {
+  mobileOpen?: boolean
+  onClose?: () => void
+}
+
+export const Sidebar = ({ mobileOpen = false, onClose }: SidebarProps) => {
   const { user, logout } = useAuth()
+  const location = useLocation()
   const items = user?.role ? navItems[user.role] : []
 
-  return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-72 flex-col bg-white border-r border-gray-100">
-      {/* Brand */}
-      <div className="h-16 flex items-center gap-3 px-6 border-b border-gray-100">
-        <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center text-white shadow-[var(--shadow-glow)]">
-          <Sparkles className="h-4 w-4" />
+  useEffect(() => {
+    if (mobileOpen) onClose?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [mobileOpen])
+
+  const nav = (
+    <>
+      <div className="h-16 flex items-center justify-between gap-3 px-6 border-b border-gray-100">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center text-white shadow-[var(--shadow-glow)] shrink-0">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display font-bold text-[15px] tracking-tight leading-none truncate">BR Corporation</p>
+            <p className="text-[11px] text-gray-500 mt-0.5 capitalize truncate">{user?.role} workspace</p>
+          </div>
         </div>
-        <div>
-          <p className="font-display font-bold text-[15px] tracking-tight leading-none">BR Corporation</p>
-          <p className="text-[11px] text-gray-500 mt-0.5 capitalize">{user?.role} workspace</p>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close menu"
+          className="lg:hidden p-2 -mr-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {items.map((item) => (
           <NavLink
@@ -116,7 +144,6 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      {/* User + logout */}
       <div className="p-3 border-t border-gray-100">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-surface-50">
           <div className="h-9 w-9 rounded-full gradient-brand text-white grid place-items-center text-sm font-semibold shadow-sm">
@@ -135,6 +162,36 @@ export const Sidebar = () => {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar (>= lg) */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-72 flex-col bg-white border-r border-gray-100">
+        {nav}
+      </aside>
+
+      {/* Mobile backdrop */}
+      <div
+        className={`lg:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm transition-opacity ${
+          mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Mobile drawer */}
+      <aside
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] flex flex-col bg-white border-r border-gray-100 shadow-2xl transition-transform duration-200 ease-out ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Main navigation"
+      >
+        {nav}
+      </aside>
+    </>
   )
 }
