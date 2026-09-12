@@ -115,7 +115,12 @@ export const QuotationRequestsPage = () => {
                         <Send className="h-3.5 w-3.5" /> Forward to manager
                       </Button>
                     )}
-                    {(role === 'manager' || role === 'admin') && r.status === 'pending_manager' && (
+                    {role === 'manager' && r.status === 'pending_manager' && (
+                      <Button size="sm" onClick={() => setQuoteReq(r)}>
+                        Create quotation
+                      </Button>
+                    )}
+                    {role === 'admin' && (r.status === 'pending_salesperson' || r.status === 'pending_manager') && (
                       <Button size="sm" onClick={() => setQuoteReq(r)}>
                         Create quotation
                       </Button>

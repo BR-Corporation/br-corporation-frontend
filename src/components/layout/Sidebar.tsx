@@ -27,6 +27,7 @@ const navItems = {
     { to: '/admin/employees', icon: UserPlus, label: 'Employees' },
     { to: '/admin/products', icon: Package, label: 'Products' },
     { to: '/admin/inventory', icon: Box, label: 'Inventory' },
+    { to: '/admin/quotation-requests', icon: FileText, label: 'Quotation requests' },
     { to: '/admin/quotations', icon: FileText, label: 'Quotations' },
     { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
