@@ -98,9 +98,13 @@ export const AdminDashboard = () => {
         <Tile
           icon={IndianRupee}
           tone="emerald"
-          label="Revenue collected"
-          value={money(finance.paymentsCollected)}
-          hint="View all payments received"
+          label="Net revenue"
+          value={money(finance.totalRevenue)}
+          hint={
+            finance.paymentsCollected != null
+              ? `Received ${money(finance.paymentsCollected)} · after returns`
+              : 'After completed returns'
+          }
           onClick={() => navigate('/admin/payments')}
         />
         <Tile

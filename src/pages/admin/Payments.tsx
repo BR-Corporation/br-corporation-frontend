@@ -7,7 +7,8 @@ import { Badge } from '../../components/status/StatusBadge'
 import { Button } from '../../components/common/Button'
 import { paymentsApi } from '../../api'
 import { useQueryClient } from '@tanstack/react-query'
-import { IndianRupee, TrendingUp, Wallet, Search } from 'lucide-react'
+import { RecordRefundModal } from '../../components/modals'
+import { IndianRupee, TrendingUp, Wallet, Search, Undo2 } from 'lucide-react'
 
 const money = (n: any) => `₹${(n ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
@@ -34,15 +35,19 @@ export const AdminPayments = () => {
   })
 
   const payments: any[] = data?.payments || []
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null)
 
   const stats = useMemo(() => {
-    const total = payments.reduce((s, p) => s + (p.amount || 0), 0)
+    let received = 0, refunded = 0
     const byMethod: Record<string, number> = {}
     payments.forEach((p) => {
+      const amt = p.amount || 0
+      if (p.type === 'refund') refunded += amt
+      else received += amt
       const k = p.paymentMethod || 'other'
-      byMethod[k] = (byMethod[k] || 0) + (p.amount || 0)
+      byMethod[k] = (byMethod[k] || 0) + (p.type === 'refund' ? -amt : amt)
     })
-    return { total, count: payments.length, byMethod }
+    return { total: received - refunded, received, refunded, count: payments.length, byMethod }
   }, [payments])
 
   const methods = useMemo(() => Object.keys(stats.byMethod), [stats])
@@ -98,9 +103,22 @@ export const AdminPayments = () => {
       },
     },
     {
+      header: 'Type',
+      key: 'type',
+      render: (item: any) => (
+        item.type === 'refund'
+          ? <Badge variant="warning">Refund</Badge>
+          : <Badge variant="success">Payment</Badge>
+      ),
+    },
+    {
       header: 'Amount',
       key: 'amount',
-      render: (item: any) => <span className="font-semibold text-emerald-700">{money(item.amount)}</span>,
+      render: (item: any) => (
+        <span className={`font-semibold ${item.type === 'refund' ? 'text-rose-600' : 'text-emerald-700'}`}>
+          {item.type === 'refund' ? '− ' : ''}{money(item.amount)}
+        </span>
+      ),
     },
     {
       header: 'Method',
@@ -120,20 +138,30 @@ export const AdminPayments = () => {
     {
       header: 'Actions',
       key: 'actions',
-      render: (item: any) => (
-        <Button
-          size="sm"
-          variant="danger"
-          loading={deleteMutation.isPending && deleteMutation.variables === item.id}
-          onClick={() => {
-            if (confirm(`Delete this payment of ₹${item.amount?.toLocaleString()}? Order outstanding will be restored.`)) {
-              deleteMutation.mutate(item.id)
-            }
-          }}
-        >
-          Delete
-        </Button>
-      ),
+      render: (item: any) => {
+        const oid = item.orderId?._id || item.orderId
+        return (
+          <div className="flex gap-2">
+            {item.type !== 'refund' && oid && (
+              <Button size="sm" variant="outline" onClick={() => setRefundOrderId(String(oid))}>
+                <Undo2 className="h-3.5 w-3.5" /> Refund
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="danger"
+              loading={deleteMutation.isPending && deleteMutation.variables === item.id}
+              onClick={() => {
+                if (confirm(`Delete this ${item.type === 'refund' ? 'refund' : 'payment'} of ₹${item.amount?.toLocaleString()}? Order totals will be reversed.`)) {
+                  deleteMutation.mutate(item.id)
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        )
+      },
     },
   ]
 
@@ -150,9 +178,12 @@ export const AdminPayments = () => {
           <CardBody>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total collected</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Net collected</p>
                 <p className="mt-2 font-display text-2xl font-bold text-gray-900">{money(stats.total)}</p>
-                <p className="mt-1 text-xs text-gray-500">{stats.count} payment{stats.count === 1 ? '' : 's'}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Received {money(stats.received)}
+                  {stats.refunded > 0 && <> · refunded <span className="text-rose-600 font-semibold">{money(stats.refunded)}</span></>}
+                </p>
               </div>
               <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-700 grid place-items-center">
                 <IndianRupee className="h-5 w-5" />
@@ -238,6 +269,14 @@ export const AdminPayments = () => {
           />
         </CardBody>
       </Card>
+
+      {refundOrderId && (
+        <RecordRefundModal
+          isOpen={!!refundOrderId}
+          onClose={() => setRefundOrderId(null)}
+          orderId={refundOrderId}
+        />
+      )}
     </div>
   )
 }
