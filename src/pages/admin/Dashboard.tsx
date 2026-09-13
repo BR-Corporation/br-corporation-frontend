@@ -173,9 +173,11 @@ export const AdminDashboard = () => {
           label="Net revenue"
           value={money(finance.totalRevenue)}
           hint={
-            finance.paymentsCollected != null
-              ? `Received ${money(finance.paymentsCollected)} · after returns`
-              : 'After completed returns'
+            finance.refundPending > 0
+              ? `Refund pending ${money(finance.refundPending)} · returns not yet refunded`
+              : finance.paymentsCollected != null
+                ? `Collected ${money(finance.paymentsCollected)} · matches revenue`
+                : 'Value of orders after returns'
           }
           onClick={() => navigate('/admin/payments')}
         />

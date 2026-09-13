@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
 import { Badge } from '../../components/status/StatusBadge'
@@ -11,6 +12,7 @@ type SortKey = 'ranking' | 'totalSales' | 'totalPaymentsCollected' | 'acceptedQu
 const money = (n: any) => `₹${(n ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
 export const AdminPerformance = () => {
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortKey>('ranking')
 
@@ -61,60 +63,69 @@ export const AdminPerformance = () => {
 
       {/* Team totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <TeamTile icon={IndianRupee}   tone="brand"   label="Team revenue"           value={money(teamTotals.revenue)} />
-        <TeamTile icon={IndianRupee}   tone="emerald" label="Payments collected"     value={money(teamTotals.payments)} />
-        <TeamTile icon={FileText}      tone="sky"     label="Accepted quotations"    value={teamTotals.quotations} />
-        <TeamTile icon={ClipboardList} tone="amber"   label="Completed follow-ups"   value={teamTotals.followUps} />
+        <TeamTile icon={IndianRupee}   tone="brand"   label="Team revenue"           value={money(teamTotals.revenue)}   onClick={() => navigate('/admin/orders')} />
+        <TeamTile icon={IndianRupee}   tone="emerald" label="Payments collected"     value={money(teamTotals.payments)}  onClick={() => navigate('/admin/payments')} />
+        <TeamTile icon={FileText}      tone="sky"     label="Accepted quotations"    value={teamTotals.quotations}       onClick={() => navigate('/admin/quotations')} />
+        <TeamTile icon={ClipboardList} tone="amber"   label="Completed follow-ups"   value={teamTotals.followUps}        onClick={() => navigate('/admin/customers')} />
       </div>
 
       {/* Highlights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-700 grid place-items-center">
-                <Trophy className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Top performer</p>
-                <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">
-                  {topPerformer?.salespersonName || '—'}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">{money(topPerformer?.totalSales || 0)} in sales</p>
-              </div>
+        <button
+          type="button"
+          disabled={!topPerformer}
+          onClick={() => topPerformer && navigate(`/admin/employees/${topPerformer.salespersonId}`)}
+          className="text-left rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)] disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-700 grid place-items-center">
+              <Trophy className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-brand-50 text-brand-700 grid place-items-center">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Team size</p>
-                <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">
-                  {rows.length} salesperson{rows.length === 1 ? '' : 's'}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">Actively tracked</p>
-              </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Top performer</p>
+              <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">
+                {topPerformer?.salespersonName || '—'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{money(topPerformer?.totalSales || 0)} in sales</p>
             </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-700 grid place-items-center">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Avg conversion</p>
-                <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">{avgConversion}%</p>
-                <p className="text-xs text-gray-500 mt-0.5">Quotation → sale</p>
-              </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/admin/employees')}
+          className="text-left rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-brand-50 text-brand-700 grid place-items-center">
+              <Users className="h-5 w-5" />
             </div>
-          </CardBody>
-        </Card>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Team size</p>
+              <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">
+                {rows.length} salesperson{rows.length === 1 ? '' : 's'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">View all employees</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/admin/quotations')}
+          className="text-left rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-700 grid place-items-center">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Avg conversion</p>
+              <p className="font-display text-lg font-bold text-gray-900 leading-tight mt-0.5">{avgConversion}%</p>
+              <p className="text-xs text-gray-500 mt-0.5">Quotation → sale</p>
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Table */}
@@ -167,7 +178,11 @@ export const AdminPerformance = () => {
                   {filteredSorted.map((r) => {
                     const pct = Math.min(100, Math.round(((r.totalSales || 0) / maxRevenue) * 100))
                     return (
-                      <tr key={r.salespersonId}>
+                      <tr
+                        key={r.salespersonId}
+                        onClick={() => navigate(`/admin/employees/${r.salespersonId}`)}
+                        className="cursor-pointer hover:bg-surface-50"
+                      >
                         <td className="py-3 pr-4">
                           <RankPill rank={r.ranking} />
                         </td>
@@ -210,29 +225,36 @@ export const AdminPerformance = () => {
 }
 
 const TeamTile = ({
-  icon: Icon, tone, label, value,
-}: { icon: any; tone: 'brand' | 'emerald' | 'sky' | 'amber'; label: string; value: any }) => {
+  icon: Icon, tone, label, value, onClick,
+}: { icon: any; tone: 'brand' | 'emerald' | 'sky' | 'amber'; label: string; value: any; onClick?: () => void }) => {
   const tones = {
     brand:   'bg-brand-50 text-brand-700',
     emerald: 'bg-emerald-50 text-emerald-700',
     sky:     'bg-sky-50 text-sky-700',
     amber:   'bg-amber-50 text-amber-700',
   }
-  return (
-    <Card hover>
-      <CardBody>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-            <p className="mt-2 font-display text-2xl font-bold text-gray-900">{value}</p>
-          </div>
-          <div className={`h-11 w-11 rounded-xl grid place-items-center ${tones[tone]}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-      </CardBody>
-    </Card>
+  const inner = (
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="mt-2 font-display text-2xl font-bold text-gray-900">{value}</p>
+      </div>
+      <div className={`h-11 w-11 rounded-xl grid place-items-center ${tones[tone]}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+    </div>
   )
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="text-left w-full rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+      >
+        {inner}
+      </button>
+    )
+  }
+  return <Card hover><CardBody>{inner}</CardBody></Card>
 }
 
 const RankPill = ({ rank }: { rank: number }) => {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
 import { Button } from '../../components/common/Button'
@@ -48,6 +49,7 @@ const defaultRange = () => {
 }
 
 export const AdminReports = () => {
+  const navigate = useNavigate()
   const [{ start, end }, setRange] = useState(defaultRange())
   const [section, setSection] = useState<Section>('overview')
 
@@ -158,10 +160,10 @@ export const AdminReports = () => {
       {section === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatTile icon={IndianRupee} tone="emerald" label="Revenue" value={money(s.totalSales)} hint={`AOV ${money(s.averageOrderValue)}`} />
-            <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} />
-            <StatTile icon={Wallet} tone="amber" label="Collected" value={money(pay.totalCollected)} hint={`Outstanding ${money(pay.totalOutstanding)}`} />
-            <StatTile icon={Users} tone="brand" label="Customers" value={totalCustomers} hint={`${newCustomers} new · ${activeCustomers} active`} />
+            <StatTile icon={IndianRupee} tone="emerald" label="Revenue" value={money(s.totalSales)} hint={`AOV ${money(s.averageOrderValue)}`} onClick={() => setSection('sales')} />
+            <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} onClick={() => navigate('/admin/orders')} />
+            <StatTile icon={Wallet} tone="amber" label="Collected" value={money(pay.totalCollected)} hint={`Outstanding ${money(pay.totalOutstanding)}`} onClick={() => navigate('/admin/payments')} />
+            <StatTile icon={Users} tone="brand" label="Customers" value={totalCustomers} hint={`${newCustomers} new · ${activeCustomers} active`} onClick={() => navigate('/admin/customers')} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -244,8 +246,8 @@ export const AdminReports = () => {
       {section === 'sales' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile icon={IndianRupee} tone="emerald" label="Total sales" value={money(s.totalSales)} />
-            <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} />
+            <StatTile icon={IndianRupee} tone="emerald" label="Total sales" value={money(s.totalSales)} onClick={() => navigate('/admin/orders')} />
+            <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} onClick={() => navigate('/admin/orders')} />
             <StatTile icon={TrendingUp} tone="brand" label="AOV" value={money(s.averageOrderValue)} />
           </div>
 
@@ -317,9 +319,9 @@ export const AdminReports = () => {
       {section === 'customers' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile icon={Users} tone="brand" label="Total customers" value={totalCustomers} />
-            <StatTile icon={Users} tone="emerald" label="New" value={newCustomers} />
-            <StatTile icon={Users} tone="sky" label="Active" value={activeCustomers} />
+            <StatTile icon={Users} tone="brand" label="Total customers" value={totalCustomers} onClick={() => navigate('/admin/customers')} />
+            <StatTile icon={Users} tone="emerald" label="New" value={newCustomers} onClick={() => navigate('/admin/customers?stage=new')} />
+            <StatTile icon={Users} tone="sky" label="Active" value={activeCustomers} onClick={() => navigate('/admin/customers')} />
           </div>
           <Card>
             <CardBody>
@@ -351,8 +353,8 @@ export const AdminReports = () => {
       {section === 'products' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <StatTile icon={Package} tone="brand" label="Total products" value={p.totalProducts ?? (p.products || []).length} />
-            <StatTile icon={Boxes} tone="amber" label="Active" value={(p.products || []).filter((x: any) => x.status === 'active').length} />
+            <StatTile icon={Package} tone="brand" label="Total products" value={p.totalProducts ?? (p.products || []).length} onClick={() => navigate('/admin/products')} />
+            <StatTile icon={Boxes} tone="amber" label="Active" value={(p.products || []).filter((x: any) => x.status === 'active').length} onClick={() => navigate('/admin/products')} />
           </div>
           <Card>
             <CardBody>
@@ -379,9 +381,9 @@ export const AdminReports = () => {
       {section === 'inventory' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile icon={Boxes} tone="brand" label="Products" value={i.totalProducts ?? 0} />
-            <StatTile icon={PackageOpen} tone="amber" label="Low stock" value={(i.lowStockProducts || []).length} />
-            <StatTile icon={PackageX} tone="rose" label="Out of stock" value={(i.outOfStockProducts || []).length} />
+            <StatTile icon={Boxes} tone="brand" label="Products" value={i.totalProducts ?? 0} onClick={() => navigate('/admin/inventory')} />
+            <StatTile icon={PackageOpen} tone="amber" label="Low stock" value={(i.lowStockProducts || []).length} onClick={() => navigate('/admin/inventory')} />
+            <StatTile icon={PackageX} tone="rose" label="Out of stock" value={(i.outOfStockProducts || []).length} onClick={() => navigate('/admin/inventory')} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
@@ -422,10 +424,10 @@ export const AdminReports = () => {
       {section === 'payments' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <StatTile icon={Wallet} tone="emerald" label="Collected" value={money(pay.totalCollected)} />
-            <StatTile icon={IndianRupee} tone="amber" label="Outstanding" value={money(pay.totalOutstanding)} />
-            <StatTile icon={ShoppingCart} tone="sky" label="Payments" value={pay.totalPayments ?? 0} />
-            <StatTile icon={TrendingUp} tone="rose" label="Overdue orders" value={pay.overduePayments ?? 0} />
+            <StatTile icon={Wallet} tone="emerald" label="Collected" value={money(pay.totalCollected)} onClick={() => navigate('/admin/payments')} />
+            <StatTile icon={IndianRupee} tone="amber" label="Outstanding" value={money(pay.totalOutstanding)} onClick={() => navigate('/admin/orders?paymentStatus=unpaid')} />
+            <StatTile icon={ShoppingCart} tone="sky" label="Payments" value={pay.totalPayments ?? 0} onClick={() => navigate('/admin/payments')} />
+            <StatTile icon={TrendingUp} tone="rose" label="Overdue orders" value={pay.overduePayments ?? 0} onClick={() => navigate('/admin/orders?paymentStatus=unpaid')} />
           </div>
           <Card>
             <CardBody>
@@ -453,7 +455,7 @@ export const AdminReports = () => {
   )
 }
 
-const StatTile = ({ icon: Icon, tone, label, value, hint }: { icon: any; tone: 'brand' | 'sky' | 'emerald' | 'amber' | 'rose'; label: string; value: any; hint?: string }) => {
+const StatTile = ({ icon: Icon, tone, label, value, hint, onClick }: { icon: any; tone: 'brand' | 'sky' | 'emerald' | 'amber' | 'rose'; label: string; value: any; hint?: string; onClick?: () => void }) => {
   const tones: any = {
     brand: 'bg-brand-50 text-brand-700',
     sky: 'bg-sky-50 text-sky-700',
@@ -461,20 +463,26 @@ const StatTile = ({ icon: Icon, tone, label, value, hint }: { icon: any; tone: '
     amber: 'bg-amber-50 text-amber-700',
     rose: 'bg-rose-50 text-rose-700',
   }
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gray-900 truncate">{value}</p>
-          {hint && <p className="mt-1 text-xs text-gray-500 truncate">{hint}</p>}
-        </div>
-        <div className={`h-10 w-10 rounded-xl grid place-items-center ${tones[tone]}`}>
-          <Icon className="h-4 w-4" />
-        </div>
+  const inner = (
+    <div className="flex items-start justify-between">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="mt-2 font-display text-2xl font-extrabold text-gray-900 truncate">{value}</p>
+        {hint && <p className="mt-1 text-xs text-gray-500 truncate">{hint}</p>}
+      </div>
+      <div className={`h-10 w-10 rounded-xl grid place-items-center ${tones[tone]}`}>
+        <Icon className="h-4 w-4" />
       </div>
     </div>
   )
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="text-left w-full rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]">
+        {inner}
+      </button>
+    )
+  }
+  return <div className="rounded-2xl border border-gray-100 bg-white shadow-[var(--shadow-soft)] p-5">{inner}</div>
 }
 
 const MiniStat = ({ icon: Icon, tone, label, value }: { icon: any; tone: 'brand' | 'amber' | 'rose'; label: string; value: any }) => {
