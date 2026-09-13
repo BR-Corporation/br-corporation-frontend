@@ -47,6 +47,17 @@ export const QuotationDetailPage = () => {
     },
   })
 
+  const sendMutation = useMutation({
+    mutationFn: async () => quotationsApi.updateQuotationStatus(id!, 'sent'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotation', id] })
+      queryClient.invalidateQueries({ queryKey: ['quotations'] })
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || 'Failed to send the quotation.')
+    },
+  })
+
   if (isLoading) return <LoadingState message="Loading quotation…" />
   if (error || !data) {
     return (
@@ -72,6 +83,22 @@ export const QuotationDetailPage = () => {
         </div>
         <Badge dot variant={variantOf(q.status)} className="capitalize">{q.status}</Badge>
       </div>
+
+      {(user?.role === 'salesperson' || user?.role === 'admin' || user?.role === 'manager') && q.status === 'draft' && (
+        <Card>
+          <CardBody>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900">This quotation is a draft</h3>
+                <p className="text-sm text-gray-600 mt-1">The customer can't see it yet. Send it so they can accept or negotiate.</p>
+              </div>
+              <Button loading={sendMutation.isPending} onClick={() => sendMutation.mutate()}>
+                Send to customer
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {user?.role === 'customer' && q.status === 'sent' && (
         <Card>
