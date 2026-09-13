@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { dashboardsApi, notificationsApi } from '../../api'
 import { LoadingState } from '../../components/common/LoadingState'
@@ -7,48 +8,121 @@ import { Button } from '../../components/common/Button'
 import { Badge } from '../../components/status/StatusBadge'
 import {
   Users, ShoppingCart, IndianRupee, TrendingUp, Clock, ArrowRight,
-  PackageX, PackageOpen, FileText, ClipboardList,
+  Bell, ShoppingBag, RotateCcw, FileText, PackageX, Sparkles, CheckCheck,
 } from 'lucide-react'
 
 const money = (n: any) => `₹${(n ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
+const ATTENTION_TYPES = new Set([
+  'order_created', 'return_created', 'quotation_requested',
+  'low_stock', 'customer_registered',
+])
+
+const iconFor = (type: string) => {
+  if (type === 'order_created') return ShoppingBag
+  if (type === 'return_created') return RotateCcw
+  if (type === 'quotation_requested') return FileText
+  if (type === 'low_stock') return PackageX
+  return Bell
+}
+
+const toneFor = (type: string) => {
+  if (type === 'order_created') return 'bg-emerald-50 text-emerald-700'
+  if (type === 'return_created') return 'bg-rose-50 text-rose-700'
+  if (type === 'quotation_requested') return 'bg-brand-50 text-brand-700'
+  if (type === 'low_stock') return 'bg-amber-50 text-amber-700'
+  return 'bg-gray-100 text-gray-700'
+}
+
+const linkFor = (n: any) => {
+  const ref = (n.referenceEntity || '').toLowerCase()
+  const id = n.referenceId
+  if (!id) return '/admin/notifications'
+  if (ref === 'order') return `/admin/orders/${id}`
+  if (ref === 'orderreturn') return `/admin/returns/${id}`
+  if (ref === 'quotationrequest') return `/admin/quotation-requests`
+  if (ref === 'quotation') return `/admin/quotations/${id}`
+  if (ref === 'customerprofile') return `/admin/customers/${id}`
+  if (ref === 'product') return `/admin/products/${id}`
+  return '/admin/notifications'
+}
+
+const timeAgo = (iso: string) => {
+  const d = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(d / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
 export const AdminDashboard = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
   const { data, isLoading, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ['adminDashboard'],
-    queryFn: async () => {
-      const response = await dashboardsApi.getAdminDashboard()
-      return response.dashboard
-    },
+    queryFn: async () => (await dashboardsApi.getAdminDashboard()).dashboard,
     refetchOnWindowFocus: true,
-    refetchOnMount: true,
     refetchInterval: 30_000,
     staleTime: 0,
   })
 
   const { data: notifData } = useQuery({
     queryKey: ['adminNotifications'],
-    queryFn: async () => notificationsApi.getNotifications({ limit: 8 }),
+    queryFn: async () => notificationsApi.getNotifications({ limit: 30 }),
     refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   })
+
+  const markRead = useMutation({
+    mutationFn: (id: string) => notificationsApi.markNotificationAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminNotifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notificationSummary'] })
+    },
+  })
+
+  const markAll = useMutation({
+    mutationFn: () => notificationsApi.markAllNotificationsAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminNotifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notificationSummary'] })
+    },
+  })
+
   const notifications: any[] = notifData?.notifications || []
+
+  const attention = useMemo(
+    () => notifications.filter((n) => ATTENTION_TYPES.has(n.type)),
+    [notifications]
+  )
+
+  const attentionCounts = useMemo(() => {
+    const c = { orders: 0, returns: 0, requests: 0, stock: 0 }
+    for (const n of attention) {
+      if (n.isRead) continue
+      if (n.type === 'order_created') c.orders++
+      else if (n.type === 'return_created') c.returns++
+      else if (n.type === 'quotation_requested') c.requests++
+      else if (n.type === 'low_stock') c.stock++
+    }
+    return c
+  }, [attention])
+
+  const unreadAttention = attention.filter((n) => !n.isRead).length
 
   if (isLoading) return <LoadingState message="Loading dashboard…" />
 
   const dashboard: any = data || {}
-  const customers  = dashboard.customers || {}
-  const sales      = dashboard.sales || {}
-  const finance    = dashboard.finance || {}
-  const inventory  = dashboard.inventory || {}
-  const quotations = dashboard.quotations || {}
-  const followUps  = dashboard.followUps || {}
-
+  const customers = dashboard.customers || {}
+  const sales     = dashboard.sales || {}
+  const finance   = dashboard.finance || {}
   const pendingCustomers = customers.pending || 0
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -59,7 +133,6 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Pending approvals banner */}
       {pendingCustomers > 0 && (
         <div className="rounded-2xl gradient-brand-subtle border border-brand-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -77,7 +150,6 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Headline tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <Tile
           icon={Users}
@@ -117,45 +189,93 @@ export const AdminDashboard = () => {
         />
       </div>
 
-      {/* Recent activity */}
+      {/* Needs attention chips */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <AttentionChip
+          icon={ShoppingBag} tone="emerald"
+          label="New orders" count={attentionCounts.orders}
+          onClick={() => navigate('/admin/orders')}
+        />
+        <AttentionChip
+          icon={RotateCcw} tone="rose"
+          label="New returns" count={attentionCounts.returns}
+          onClick={() => navigate('/admin/returns')}
+        />
+        <AttentionChip
+          icon={FileText} tone="brand"
+          label="Quotation requests" count={attentionCounts.requests}
+          onClick={() => navigate('/admin/quotation-requests')}
+        />
+        <AttentionChip
+          icon={PackageX} tone="amber"
+          label="Low stock alerts" count={attentionCounts.stock}
+          onClick={() => navigate('/admin/inventory')}
+        />
+      </div>
+
+      {/* Notifications — replaces the old inventory/quotations/follow-ups strip */}
       <Card>
         <CardBody>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-lg font-bold text-gray-900">Recent activity</h3>
-            <button
-              onClick={() => navigate('/admin/notifications')}
-              className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-            >
-              See all <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-brand-50 text-brand-700 grid place-items-center">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900">Notifications</h3>
+                <p className="text-xs text-gray-500">
+                  {unreadAttention > 0
+                    ? `${unreadAttention} item${unreadAttention === 1 ? '' : 's'} need your attention`
+                    : 'You\'re all caught up'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {unreadAttention > 0 && (
+                <Button variant="ghost" size="sm" loading={markAll.isPending} onClick={() => markAll.mutate()}>
+                  <CheckCheck className="h-4 w-4" /> Mark all read
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/notifications')}>
+                See all <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+
           {notifications.length === 0 ? (
-            <p className="text-sm text-gray-500">No activity yet.</p>
+            <div className="text-center py-10">
+              <div className="mx-auto h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-700 grid place-items-center mb-3">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <p className="font-semibold text-gray-900">Nothing new</p>
+              <p className="text-sm text-gray-500 mt-1">New orders, returns and quotation requests will show up here.</p>
+            </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {notifications.slice(0, 8).map((n: any) => {
-                const ref = n.referenceEntity?.toLowerCase()
-                const target =
-                  ref === 'order' && n.referenceId ? `/admin/orders/${n.referenceId}` :
-                  ref === 'quotation' && n.referenceId ? `/admin/quotations/${n.referenceId}` :
-                  ref === 'customerprofile' && n.referenceId ? `/admin/customers/${n.referenceId}` :
-                  '/admin/notifications'
+              {notifications.slice(0, 12).map((n: any) => {
+                const Icon = iconFor(n.type)
                 return (
                   <li
                     key={n.id}
-                    onClick={() => navigate(target)}
-                    className="py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-50 -mx-2 px-2 rounded-lg"
+                    onClick={() => {
+                      if (!n.isRead) markRead.mutate(n.id)
+                      navigate(linkFor(n))
+                    }}
+                    className={`py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-50 -mx-2 px-2 rounded-lg ${!n.isRead ? 'bg-brand-50/30' : ''}`}
                   >
-                    <span className={`h-2 w-2 rounded-full mt-2 ${n.isRead ? 'bg-gray-300' : 'bg-brand-500'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${n.isRead ? 'text-gray-700' : 'text-gray-900 font-semibold'}`}>
-                        {n.title || n.type}
-                      </p>
-                      {n.message && <p className="text-xs text-gray-500 mt-0.5 truncate">{n.message}</p>}
-                    </div>
-                    <span className="text-[11px] text-gray-400 whitespace-nowrap">
-                      {new Date(n.createdAt).toLocaleDateString()}
+                    <span className={`h-9 w-9 shrink-0 rounded-lg grid place-items-center ${toneFor(n.type)}`}>
+                      <Icon className="h-4 w-4" />
                     </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-sm ${n.isRead ? 'text-gray-700' : 'text-gray-900 font-semibold'}`}>
+                          {n.title || n.type}
+                        </p>
+                        {!n.isRead && <Badge variant="brand">New</Badge>}
+                      </div>
+                      {n.message && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>}
+                    </div>
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">{timeAgo(n.createdAt)}</span>
                   </li>
                 )
               })}
@@ -163,74 +283,6 @@ export const AdminDashboard = () => {
           )}
         </CardBody>
       </Card>
-
-      {/* Two column extras */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Inventory */}
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-lg font-bold text-gray-900">Inventory</h3>
-              <button
-                onClick={() => navigate('/admin/inventory')}
-                className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-              >
-                Open <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <MiniRow icon={PackageOpen} tone="brand"  label="Total products" value={inventory.totalProducts ?? 0} />
-              <MiniRow icon={PackageOpen} tone="amber"  label="Low stock"      value={inventory.lowStockProducts ?? 0} />
-              <MiniRow icon={PackageX}    tone="rose"   label="Out of stock"   value={inventory.outOfStockProducts ?? 0} />
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Quotations */}
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-lg font-bold text-gray-900">Quotations</h3>
-              <button
-                onClick={() => navigate('/admin/quotations')}
-                className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-              >
-                Open <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <MiniRow icon={FileText} tone="brand"   label="Total sent"       value={quotations.total ?? 0} />
-              <MiniRow icon={FileText} tone="emerald" label="Accepted"         value={quotations.accepted ?? 0} />
-              <MiniRow icon={FileText} tone="rose"    label="Rejected"         value={quotations.rejected ?? 0} />
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-xs text-gray-500">Conversion rate</span>
-                <Badge variant={((quotations.conversionRate || 0) >= 50) ? 'success' : 'info'}>
-                  {quotations.conversionRate ?? 0}%
-                </Badge>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Follow-ups */}
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-lg font-bold text-gray-900">Follow-ups</h3>
-              <button
-                onClick={() => navigate('/admin/customers')}
-                className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-              >
-                Customers <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <MiniRow icon={ClipboardList} tone="brand" label="Total"      value={followUps.total ?? 0} />
-              <MiniRow icon={ClipboardList} tone="rose"  label="Overdue"    value={followUps.overdue ?? 0} />
-            </div>
-          </CardBody>
-        </Card>
-      </div>
     </div>
   )
 }
@@ -268,24 +320,29 @@ const Tile = ({
   )
 }
 
-const MiniRow = ({
-  icon: Icon, tone, label, value,
-}: { icon: any; tone: 'brand' | 'amber' | 'rose' | 'emerald'; label: string; value: any }) => {
+const AttentionChip = ({
+  icon: Icon, tone, label, count, onClick,
+}: { icon: any; tone: 'brand' | 'emerald' | 'rose' | 'amber'; label: string; count: number; onClick?: () => void }) => {
   const tones = {
     brand:   'bg-brand-50 text-brand-700',
-    amber:   'bg-amber-50 text-amber-700',
-    rose:    'bg-rose-50 text-rose-700',
     emerald: 'bg-emerald-50 text-emerald-700',
+    rose:    'bg-rose-50 text-rose-700',
+    amber:   'bg-amber-50 text-amber-700',
   }
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2.5">
-        <span className={`h-8 w-8 rounded-lg grid place-items-center ${tones[tone]}`}>
+    <button
+      onClick={onClick}
+      className={`text-left rounded-xl border p-4 transition-all hover:shadow-[var(--shadow-soft)] ${count > 0 ? 'border-brand-200 bg-white' : 'border-gray-100 bg-white opacity-90'}`}
+    >
+      <div className="flex items-center gap-3">
+        <span className={`h-10 w-10 rounded-lg grid place-items-center ${tones[tone]}`}>
           <Icon className="h-4 w-4" />
         </span>
-        <span className="text-sm text-gray-700">{label}</span>
+        <div className="min-w-0">
+          <p className="font-display text-2xl font-extrabold text-gray-900 leading-none">{count}</p>
+          <p className="text-xs text-gray-500 mt-1 truncate">{label}</p>
+        </div>
       </div>
-      <span className="font-display text-lg font-bold text-gray-900">{value}</span>
-    </div>
+    </button>
   )
 }
