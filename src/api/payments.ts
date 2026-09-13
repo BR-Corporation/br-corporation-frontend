@@ -55,4 +55,17 @@ export const paymentsApi = {
     const response = await apiClient.delete(`/payments/${paymentId}`)
     return response.data
   },
+
+  recordRefund: async (data: {
+    orderId: string
+    amount: number
+    paymentMethod: string
+    paymentDate?: string
+    transactionReference?: string
+    notes?: string
+    orderReturnId?: string
+  }) => {
+    const response = await apiClient.post('/payments/refund', data)
+    return response.data
+  },
 }

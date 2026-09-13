@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
-import { returnsApi } from '../../api'
+import { useState } from 'react'
+import { returnsApi, paymentsApi } from '../../api'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
 import { Badge } from '../../components/status/StatusBadge'
-import { ArrowLeft, RotateCcw, Receipt, UserIcon } from 'lucide-react'
+import { Button } from '../../components/common/Button'
+import { RecordRefundModal } from '../../components/modals'
+import { useAuth } from '../../context/AuthContext'
+import { ArrowLeft, RotateCcw, Receipt, UserIcon, IndianRupee, CheckCircle2 } from 'lucide-react'
 
 const variantOf = (s: string) =>
   s === 'approved' ? 'success' :
@@ -15,6 +19,8 @@ const variantOf = (s: string) =>
 export const ReturnDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [showRefund, setShowRefund] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['return', id],
@@ -24,6 +30,18 @@ export const ReturnDetailPage = () => {
     },
     enabled: !!id,
   })
+
+  const orderId = (data as any)?.order?._id || (data as any)?.orderId?._id || (data as any)?.orderId
+  const { data: orderPayments } = useQuery({
+    queryKey: ['orderPayments', orderId],
+    queryFn: async () => paymentsApi.getOrderPayments(orderId),
+    enabled: !!orderId,
+  })
+
+  const payments: any[] = orderPayments?.payments || []
+  const refundsList = payments.filter((p) => p.type === 'refund')
+  const netPaid = payments.reduce((s, p) => s + (p.type === 'refund' ? -p.amount : p.amount), 0)
+  const refundedTotal = refundsList.reduce((s, p) => s + p.amount, 0)
 
   if (isLoading) return <LoadingState message="Loading return…" />
   if (error || !data) {
@@ -61,6 +79,34 @@ export const ReturnDetailPage = () => {
           <Badge variant="brand" className="capitalize">{r.returnType}</Badge>
         </div>
       </div>
+
+      {(r.status === 'approved' || r.status === 'completed') && (
+        <Card>
+          <CardBody>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <IndianRupee className="h-5 w-5 text-brand-700" /> Refund status
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Refunded so far: <span className="font-semibold text-gray-900">{money(refundedTotal)}</span>
+                  {' '}of {money(total)}.
+                  {refundedTotal >= total && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-emerald-700">
+                      <CheckCircle2 className="h-4 w-4" /> Fully refunded
+                    </span>
+                  )}
+                </p>
+              </div>
+              {user?.role === 'admin' && refundedTotal < total && orderId && (
+                <Button onClick={() => setShowRefund(true)}>
+                  Record refund
+                </Button>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -182,6 +228,17 @@ export const ReturnDetailPage = () => {
           </Card>
         </div>
       </div>
+
+      {orderId && (
+        <RecordRefundModal
+          isOpen={showRefund}
+          onClose={() => setShowRefund(false)}
+          orderId={orderId}
+          orderReturnId={r.id}
+          suggestedAmount={Math.min(total - refundedTotal, netPaid)}
+          outstandingPaid={netPaid}
+        />
+      )}
     </div>
   )
 }

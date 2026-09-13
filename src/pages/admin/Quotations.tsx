@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { DataTable } from '../../components/tables/DataTable'
 import { Button } from '../../components/common/Button'
 import { Badge } from '../../components/status/StatusBadge'
@@ -9,6 +9,7 @@ import { quotationsApi } from '../../api'
 
 export const AdminQuotations = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [showQuotationModal, setShowQuotationModal] = useState(false)
 
   const { data, isLoading } = useQuery({
@@ -17,6 +18,15 @@ export const AdminQuotations = () => {
       const response = await quotationsApi.getQuotations()
       return response
     },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => quotationsApi.deleteQuotation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] })
+      queryClient.invalidateQueries({ queryKey: ['quotationRequests'] })
+    },
+    onError: (err: any) => alert(err?.response?.data?.message || 'Failed to delete quotation.'),
   })
 
   const quotations = data?.quotations || []
@@ -54,9 +64,23 @@ export const AdminQuotations = () => {
       header: 'Actions',
       key: 'actions',
       render: (item: any) => (
-        <Button size="sm" variant="ghost" onClick={() => navigate(`/admin/quotations/${item.id}`)}>
-          View
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => navigate(`/admin/quotations/${item.id}`)}>
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            loading={deleteMutation.isPending && deleteMutation.variables === item.id}
+            onClick={() => {
+              if (confirm(`Delete quotation #${String(item.id).slice(-6)}? This cannot be undone.`)) {
+                deleteMutation.mutate(item.id)
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </div>
       ),
     },
   ]

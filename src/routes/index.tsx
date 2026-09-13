@@ -306,7 +306,6 @@ export const router = createBrowserRouter([
       { path: 'customer/messages', element: <MessagesPage /> },
       { path: 'customer/quotation-requests', element: <QuotationRequestsPage /> },
       { path: 'customer/returns/:id', element: <ReturnDetailPage /> },
-      { path: 'customer/returns/:id', element: <ReturnDetailPage /> },
       {
         path: 'customer/payments',
         element: <CustomerPayments />,
