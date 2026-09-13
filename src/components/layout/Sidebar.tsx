@@ -32,6 +32,7 @@ const navItems = {
     { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
     { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { to: '/admin/returns', icon: ClipboardList, label: 'Returns' },
+    { to: '/admin/messages', icon: MessageCircle, label: 'Messages' },
     { to: '/admin/performance', icon: BarChart3, label: 'Performance' },
     { to: '/admin/reports', icon: FileBarChart, label: 'Reports' },
     { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
