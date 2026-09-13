@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
 import { quotationsApi } from '../../api'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
 import { Badge } from '../../components/status/StatusBadge'
-import { ArrowLeft, FileText, Receipt, UserIcon } from 'lucide-react'
+import { Button } from '../../components/common/Button'
+import { useAuth } from '../../context/AuthContext'
+import { ArrowLeft, FileText, Receipt, UserIcon, CheckCircle2, MessageCircle } from 'lucide-react'
 
 const variantOf = (s: string) =>
   s === 'accepted' ? 'success' :
@@ -15,6 +18,10 @@ const variantOf = (s: string) =>
 export const QuotationDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const [acceptError, setAcceptError] = useState('')
+  const [orderCreated, setOrderCreated] = useState<any>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['quotation', id],
@@ -23,6 +30,21 @@ export const QuotationDetailPage = () => {
       return res.quotation || res
     },
     enabled: !!id,
+  })
+
+  const acceptMutation = useMutation({
+    mutationFn: async () => quotationsApi.updateQuotationStatus(id!, 'accepted'),
+    onSuccess: (res: any) => {
+      setAcceptError('')
+      const created = res?.quotation?.order || res?.order || null
+      if (created) setOrderCreated(created)
+      queryClient.invalidateQueries({ queryKey: ['quotation', id] })
+      queryClient.invalidateQueries({ queryKey: ['customerQuotations'] })
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
+    onError: (err: any) => {
+      setAcceptError(err?.response?.data?.message || 'Failed to accept the quotation.')
+    },
   })
 
   if (isLoading) return <LoadingState message="Loading quotation…" />
@@ -50,6 +72,67 @@ export const QuotationDetailPage = () => {
         </div>
         <Badge dot variant={variantOf(q.status)} className="capitalize">{q.status}</Badge>
       </div>
+
+      {user?.role === 'customer' && q.status === 'sent' && (
+        <Card>
+          <CardBody>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900">Ready to decide?</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Accept to place an order at these prices, or message your salesperson to renegotiate.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/customer/messages')}
+                >
+                  <MessageCircle className="h-4 w-4" /> Negotiate via message
+                </Button>
+                <Button
+                  loading={acceptMutation.isPending}
+                  onClick={() => {
+                    if (confirm(`Accept this quotation and place an order for ${money(q.grandTotal)}?`)) {
+                      acceptMutation.mutate()
+                    }
+                  }}
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Accept &amp; place order
+                </Button>
+              </div>
+            </div>
+            {acceptError && (
+              <div className="mt-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+                {acceptError}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      {orderCreated && (
+        <Card>
+          <CardBody>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-700 grid place-items-center">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-display text-lg font-bold text-gray-900">Order placed</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Order #{String(orderCreated.id || orderCreated._id).slice(-6)} was created at the quoted price of {money(orderCreated.grandTotal ?? q.grandTotal)}.
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => navigate(`/customer/orders/${orderCreated.id || orderCreated._id}`)}>
+                View order
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
