@@ -95,8 +95,8 @@ export const AdminReports = () => {
   const bestSelling: any[] = i.bestSellingProducts || []
   const paymentsList: any[] = pay.payments || []
 
-  const maxDayRev = useMemo(() => Math.max(1, ...salesByDate.map((d) => d.totalRevenue || 0)), [salesByDate])
-  const maxSpRev = useMemo(() => Math.max(1, ...salesBySalesperson.map((d) => d.totalRevenue || 0)), [salesBySalesperson])
+  const maxDayRev = useMemo(() => Math.max(1, ...salesByDate.map((d: any) => d.sales ?? d.totalRevenue ?? 0)), [salesByDate])
+  const maxSpRev  = useMemo(() => Math.max(1, ...salesBySalesperson.map((d: any) => d.sales ?? d.totalRevenue ?? 0)), [salesBySalesperson])
 
   const setPreset = (days: number) => {
     const e = new Date()
@@ -174,15 +174,18 @@ export const AdminReports = () => {
                   <EmptyRow msg="No sales in this period." />
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
-                    {salesByDate.slice(-14).map((d: any) => (
-                      <div key={d._id} className="grid grid-cols-12 items-center gap-2 text-sm">
-                        <span className="col-span-3 text-xs text-gray-500">{d._id}</span>
-                        <div className="col-span-6 h-2 rounded-full bg-surface-100 overflow-hidden">
-                          <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${((d.totalRevenue || 0) / maxDayRev) * 100}%` }} />
+                    {salesByDate.slice(-14).map((d: any) => {
+                      const rev = d.sales ?? d.totalRevenue ?? 0
+                      return (
+                        <div key={d._id} className="grid grid-cols-12 items-center gap-2 text-sm">
+                          <span className="col-span-3 text-xs text-gray-500">{d._id}</span>
+                          <div className="col-span-6 h-2 rounded-full bg-surface-100 overflow-hidden">
+                            <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${(rev / maxDayRev) * 100}%` }} />
+                          </div>
+                          <span className="col-span-3 text-right font-semibold text-gray-900">{money(rev)}</span>
                         </div>
-                        <span className="col-span-3 text-right font-semibold text-gray-900">{money(d.totalRevenue)}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </CardBody>
@@ -195,15 +198,18 @@ export const AdminReports = () => {
                   <EmptyRow msg="No sales attributed yet." />
                 ) : (
                   <div className="space-y-2">
-                    {salesBySalesperson.slice(0, 8).map((sp: any) => (
-                      <div key={sp._id} className="grid grid-cols-12 items-center gap-2 text-sm">
-                        <span className="col-span-4 truncate">{sp.salespersonName || '—'}</span>
-                        <div className="col-span-5 h-2 rounded-full bg-surface-100 overflow-hidden">
-                          <div className="h-2 rounded-full bg-brand-500" style={{ width: `${((sp.totalRevenue || 0) / maxSpRev) * 100}%` }} />
+                    {salesBySalesperson.slice(0, 8).map((sp: any) => {
+                      const rev = sp.sales ?? sp.totalRevenue ?? 0
+                      return (
+                        <div key={sp._id} className="grid grid-cols-12 items-center gap-2 text-sm">
+                          <span className="col-span-4 truncate">{sp.salespersonName || '—'}</span>
+                          <div className="col-span-5 h-2 rounded-full bg-surface-100 overflow-hidden">
+                            <div className="h-2 rounded-full bg-brand-500" style={{ width: `${(rev / maxSpRev) * 100}%` }} />
+                          </div>
+                          <span className="col-span-3 text-right font-semibold text-gray-900">{money(rev)}</span>
                         </div>
-                        <span className="col-span-3 text-right font-semibold text-gray-900">{money(sp.totalRevenue)}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </CardBody>
@@ -254,13 +260,14 @@ export const AdminReports = () => {
           <Card>
             <CardBody>
               <SectionHeader title="Sales by day" onExport={() =>
-                downloadCsv(`sales-by-day_${start}_${end}.csv`, toCsv(salesByDate, [
-                  { key: '_id', header: 'Date' }, { key: 'totalRevenue', header: 'Revenue' }, { key: 'totalOrders', header: 'Orders' },
-                ]))
+                downloadCsv(`sales-by-day_${start}_${end}.csv`, toCsv(
+                  salesByDate.map((d: any) => ({ date: d._id, revenue: d.sales ?? d.totalRevenue, orders: d.orders ?? d.totalOrders })),
+                  [{ key: 'date', header: 'Date' }, { key: 'revenue', header: 'Revenue' }, { key: 'orders', header: 'Orders' }]
+                ))
               } />
               <SimpleTable
                 columns={[{ h: 'Date' }, { h: 'Orders', align: 'right' }, { h: 'Revenue', align: 'right' }]}
-                rows={salesByDate.map((d: any) => [d._id, d.totalOrders, money(d.totalRevenue)])}
+                rows={salesByDate.map((d: any) => [d._id, d.orders ?? d.totalOrders ?? 0, money(d.sales ?? d.totalRevenue)])}
                 empty="No sales in this range."
               />
             </CardBody>
@@ -270,13 +277,14 @@ export const AdminReports = () => {
             <Card>
               <CardBody>
                 <SectionHeader title="By salesperson" onExport={() =>
-                  downloadCsv(`sales-by-sp_${start}_${end}.csv`, toCsv(salesBySalesperson, [
-                    { key: 'salespersonName', header: 'Salesperson' }, { key: 'totalOrders', header: 'Orders' }, { key: 'totalRevenue', header: 'Revenue' },
-                  ]))
+                  downloadCsv(`sales-by-sp_${start}_${end}.csv`, toCsv(
+                    salesBySalesperson.map((r: any) => ({ name: r.salespersonName, orders: r.orders ?? r.totalOrders, revenue: r.sales ?? r.totalRevenue })),
+                    [{ key: 'name', header: 'Salesperson' }, { key: 'orders', header: 'Orders' }, { key: 'revenue', header: 'Revenue' }]
+                  ))
                 } />
                 <SimpleTable
                   columns={[{ h: 'Salesperson' }, { h: 'Orders', align: 'right' }, { h: 'Revenue', align: 'right' }]}
-                  rows={salesBySalesperson.map((r: any) => [r.salespersonName || '—', r.totalOrders, money(r.totalRevenue)])}
+                  rows={salesBySalesperson.map((r: any) => [r.salespersonName || '—', r.orders ?? r.totalOrders ?? 0, money(r.sales ?? r.totalRevenue)])}
                   empty="No data."
                 />
               </CardBody>
@@ -285,13 +293,14 @@ export const AdminReports = () => {
             <Card>
               <CardBody>
                 <SectionHeader title="By customer (top)" onExport={() =>
-                  downloadCsv(`sales-by-customer_${start}_${end}.csv`, toCsv(salesByCustomer, [
-                    { key: 'customerBusinessName', header: 'Customer' }, { key: 'totalOrders', header: 'Orders' }, { key: 'totalRevenue', header: 'Revenue' },
-                  ]))
+                  downloadCsv(`sales-by-customer_${start}_${end}.csv`, toCsv(
+                    salesByCustomer.map((r: any) => ({ name: r.customerName ?? r.customerBusinessName, orders: r.orders ?? r.totalOrders, revenue: r.sales ?? r.totalRevenue })),
+                    [{ key: 'name', header: 'Customer' }, { key: 'orders', header: 'Orders' }, { key: 'revenue', header: 'Revenue' }]
+                  ))
                 } />
                 <SimpleTable
                   columns={[{ h: 'Customer' }, { h: 'Orders', align: 'right' }, { h: 'Revenue', align: 'right' }]}
-                  rows={salesByCustomer.slice(0, 15).map((r: any) => [r.customerBusinessName || '—', r.totalOrders, money(r.totalRevenue)])}
+                  rows={salesByCustomer.slice(0, 15).map((r: any) => [r.customerName ?? r.customerBusinessName ?? '—', r.orders ?? r.totalOrders ?? 0, money(r.sales ?? r.totalRevenue)])}
                   empty="No data."
                 />
               </CardBody>
@@ -301,13 +310,14 @@ export const AdminReports = () => {
           <Card>
             <CardBody>
               <SectionHeader title="By product" onExport={() =>
-                downloadCsv(`sales-by-product_${start}_${end}.csv`, toCsv(salesByProduct, [
-                  { key: 'productName', header: 'Product' }, { key: 'totalQuantity', header: 'Qty' }, { key: 'totalRevenue', header: 'Revenue' },
-                ]))
+                downloadCsv(`sales-by-product_${start}_${end}.csv`, toCsv(
+                  salesByProduct.map((r: any) => ({ name: r.productName, qty: r.quantity ?? r.totalQuantity, revenue: r.revenue ?? r.totalRevenue })),
+                  [{ key: 'name', header: 'Product' }, { key: 'qty', header: 'Qty' }, { key: 'revenue', header: 'Revenue' }]
+                ))
               } />
               <SimpleTable
                 columns={[{ h: 'Product' }, { h: 'Qty', align: 'right' }, { h: 'Revenue', align: 'right' }]}
-                rows={salesByProduct.slice(0, 25).map((r: any) => [r.productName || '—', r.totalQuantity, money(r.totalRevenue)])}
+                rows={salesByProduct.slice(0, 25).map((r: any) => [r.productName || '—', r.quantity ?? r.totalQuantity ?? 0, money(r.revenue ?? r.totalRevenue)])}
                 empty="No product data."
               />
             </CardBody>
