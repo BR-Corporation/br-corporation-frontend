@@ -41,6 +41,8 @@ const navItems = {
     { to: '/manager/quotation-requests', icon: FileText, label: 'Quotation requests' },
     { to: '/manager/products', icon: Package, label: 'Products' },
     { to: '/manager/inventory', icon: Box, label: 'Inventory' },
+    { to: '/manager/performance', icon: BarChart3, label: 'Team performance' },
+    { to: '/manager/reports', icon: FileBarChart, label: 'Reports' },
     { to: '/manager/notifications', icon: Bell, label: 'Notifications' },
   ],
   salesperson: [
