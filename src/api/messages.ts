@@ -11,4 +11,8 @@ export const messagesApi = {
   listAllConversations: async () => (await apiClient.get('/messages/admin/conversations')).data,
   getAnyThread: async (userAId: string, userBId: string) =>
     (await apiClient.get(`/messages/admin/thread/${userAId}/${userBId}`)).data,
+
+  // Admin: full merged view of a customer's conversation (SP + all admins)
+  getCustomerConversation: async (customerUserId: string) =>
+    (await apiClient.get(`/messages/admin/customer/${customerUserId}`)).data,
 }

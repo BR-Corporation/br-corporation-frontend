@@ -98,14 +98,14 @@ export const MessagesPage = () => {
 
   const activeContact = contactList.find((t) => t.otherUserId === activeOtherId)
 
-  // For admin: fetch the customer↔salesperson thread. For non-admin: normal thread with the other party.
+  // For admin: fetch the customer's FULL conversation (SP + any admin) merged.
+  // For non-admin: normal thread with the other party.
   const { data: threadData } = useQuery({
-    queryKey: isAdmin ? ['adminThread', activeOtherId, activeContact?.spId] : ['messageThread', activeOtherId],
+    queryKey: isAdmin ? ['adminCustomerConversation', activeOtherId] : ['messageThread', activeOtherId],
     queryFn: async () => {
       if (!activeOtherId) return null
       if (isAdmin) {
-        if (!activeContact?.spId) return { messages: [], other: { Name: activeContact?.otherName, role: 'customer' } }
-        return messagesApi.getAnyThread(activeOtherId, activeContact.spId)
+        return messagesApi.getCustomerConversation(activeOtherId)
       }
       return messagesApi.getThread(activeOtherId)
     },
@@ -118,7 +118,7 @@ export const MessagesPage = () => {
     onSuccess: () => {
       setDraft('')
       if (isAdmin) {
-        queryClient.invalidateQueries({ queryKey: ['adminThread', activeOtherId, activeContact?.spId] })
+        queryClient.invalidateQueries({ queryKey: ['adminCustomerConversation', activeOtherId] })
         queryClient.invalidateQueries({ queryKey: ['adminAllConversations'] })
       } else {
         queryClient.invalidateQueries({ queryKey: ['messageThread', activeOtherId] })
