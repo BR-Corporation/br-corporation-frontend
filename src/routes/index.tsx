@@ -27,7 +27,6 @@ import { AdminPayments } from '../pages/admin/Payments'
 import { AdminReturns } from '../pages/admin/Returns'
 import { AdminPerformance } from '../pages/admin/Performance'
 import { AdminReports } from '../pages/admin/Reports'
-import { AdminMessages } from '../pages/admin/Messages'
 import { AdminNotifications } from '../pages/admin/Notifications'
 
 // Manager pages
@@ -149,7 +148,7 @@ export const router = createBrowserRouter([
       { path: 'admin/products/:id', element: <ProductDetailPage /> },
       { path: 'admin/quotations/:id', element: <QuotationDetailPage /> },
       { path: 'admin/returns/:id', element: <ReturnDetailPage /> },
-      { path: 'admin/messages', element: <AdminMessages /> },
+      { path: 'admin/messages', element: <MessagesPage /> },
       { path: 'admin/quotation-requests', element: <QuotationRequestsPage /> },
       {
         path: 'admin/payments',
