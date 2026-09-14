@@ -160,7 +160,17 @@ export const AdminReports = () => {
       {section === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatTile icon={IndianRupee} tone="emerald" label="Revenue" value={money(s.totalSales)} hint={`AOV ${money(s.averageOrderValue)}`} onClick={() => setSection('sales')} />
+            <StatTile
+              icon={IndianRupee} tone="emerald"
+              label="Net revenue"
+              value={money(s.totalRevenue ?? s.totalSales)}
+              hint={
+                s.returnedAmount > 0
+                  ? `Gross ${money(s.totalSales)} · returns ${money(s.returnedAmount)}`
+                  : `AOV ${money(s.averageOrderValue)}`
+              }
+              onClick={() => setSection('sales')}
+            />
             <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} onClick={() => navigate('/admin/orders')} />
             <StatTile icon={Wallet} tone="amber" label="Collected" value={money(pay.totalCollected)} hint={`Outstanding ${money(pay.totalOutstanding)}`} onClick={() => navigate('/admin/payments')} />
             <StatTile icon={Users} tone="brand" label="Customers" value={totalCustomers} hint={`${newCustomers} new · ${activeCustomers} active`} onClick={() => navigate('/admin/customers')} />
@@ -251,9 +261,10 @@ export const AdminReports = () => {
       {/* SALES */}
       {section === 'sales' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile icon={IndianRupee} tone="emerald" label="Total sales" value={money(s.totalSales)} onClick={() => navigate('/admin/orders')} />
-            <StatTile icon={ShoppingCart} tone="sky" label="Orders" value={s.totalOrders ?? 0} onClick={() => navigate('/admin/orders')} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatTile icon={IndianRupee} tone="sky" label="Gross sales" value={money(s.totalSales)} onClick={() => navigate('/admin/orders')} />
+            <StatTile icon={IndianRupee} tone="rose" label="Returned" value={money(s.returnedAmount)} hint="Completed returns" onClick={() => navigate('/admin/returns')} />
+            <StatTile icon={IndianRupee} tone="emerald" label="Net revenue" value={money(s.totalRevenue ?? s.totalSales)} />
             <StatTile icon={TrendingUp} tone="brand" label="AOV" value={money(s.averageOrderValue)} />
           </div>
 
