@@ -444,29 +444,44 @@ export const AdminReports = () => {
       {/* PAYMENTS */}
       {section === 'payments' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <StatTile icon={Wallet} tone="emerald" label="Collected" value={money(pay.totalCollected)} onClick={() => navigate('/admin/payments')} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <StatTile icon={Wallet} tone="sky" label="Received" value={money(pay.grossCollected ?? pay.totalCollected)} onClick={() => navigate('/admin/payments')} />
+            <StatTile icon={IndianRupee} tone="rose" label="Refunded" value={money(pay.totalRefunded)} hint="Money returned to customers" onClick={() => navigate('/admin/returns')} />
+            <StatTile icon={Wallet} tone="emerald" label="Net collected" value={money(pay.totalCollected)} onClick={() => navigate('/admin/payments')} />
             <StatTile icon={IndianRupee} tone="amber" label="Outstanding" value={money(pay.totalOutstanding)} onClick={() => navigate('/admin/orders?paymentStatus=unpaid')} />
-            <StatTile icon={ShoppingCart} tone="sky" label="Payments" value={pay.totalPayments ?? 0} onClick={() => navigate('/admin/payments')} />
-            <StatTile icon={TrendingUp} tone="rose" label="Overdue orders" value={pay.overduePayments ?? 0} onClick={() => navigate('/admin/orders?paymentStatus=unpaid')} />
+            <StatTile icon={TrendingUp} tone="brand" label="Overdue orders" value={pay.overduePayments ?? 0} onClick={() => navigate('/admin/orders?paymentStatus=unpaid')} />
           </div>
           <Card>
             <CardBody>
-              <SectionHeader title="Recent payments" onExport={() =>
-                downloadCsv(`payments_${start}_${end}.csv`, toCsv(paymentsList, [
-                  { key: 'paymentDate', header: 'Date' }, { key: 'amount', header: 'Amount' },
-                  { key: 'paymentMethod', header: 'Method' }, { key: 'transactionReference', header: 'Reference' },
+              <SectionHeader title="Recent payments &amp; refunds" onExport={() =>
+                downloadCsv(`payments_${start}_${end}.csv`, toCsv(paymentsList.map((r: any) => ({
+                  date: new Date(r.paymentDate || r.createdAt).toISOString().slice(0, 10),
+                  type: r.type || 'payment',
+                  amount: r.type === 'refund' ? -r.amount : r.amount,
+                  method: r.paymentMethod,
+                  reference: r.transactionReference,
+                  customer: r.customer,
+                })), [
+                  { key: 'date', header: 'Date' }, { key: 'type', header: 'Type' },
+                  { key: 'amount', header: 'Amount' }, { key: 'method', header: 'Method' },
+                  { key: 'reference', header: 'Reference' }, { key: 'customer', header: 'Customer' },
                 ]))
               } />
               <SimpleTable
-                columns={[{ h: 'Date' }, { h: 'Amount', align: 'right' }, { h: 'Method' }, { h: 'Reference' }]}
-                rows={paymentsList.slice(0, 100).map((r: any) => [
-                  new Date(r.paymentDate || r.createdAt).toLocaleDateString(),
-                  money(r.amount),
-                  <Badge key="m" variant="info" className="capitalize">{(r.paymentMethod || '').replace('_', ' ')}</Badge>,
-                  r.transactionReference || '—',
-                ])}
-                empty="No payments recorded in this range."
+                columns={[{ h: 'Date' }, { h: 'Type' }, { h: 'Amount', align: 'right' }, { h: 'Method' }, { h: 'Reference' }]}
+                rows={paymentsList.slice(0, 100).map((r: any) => {
+                  const isRefund = r.type === 'refund'
+                  return [
+                    new Date(r.paymentDate || r.createdAt).toLocaleDateString(),
+                    <Badge key="t" variant={isRefund ? 'warning' : 'success'}>{isRefund ? 'Refund' : 'Payment'}</Badge>,
+                    <span key="a" className={`font-semibold ${isRefund ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      {isRefund ? '− ' : ''}{money(r.amount)}
+                    </span>,
+                    <Badge key="m" variant="info" className="capitalize">{(r.paymentMethod || '').replace('_', ' ')}</Badge>,
+                    r.transactionReference || '—',
+                  ]
+                })}
+                empty="No payments or refunds in this range."
               />
             </CardBody>
           </Card>
