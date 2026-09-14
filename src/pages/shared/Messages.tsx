@@ -53,17 +53,23 @@ export const MessagesPage = () => {
 
   const contactList: ThreadItem[] = useMemo(() => {
     if (isAdmin) {
-      // Show unique customers with their salesperson thread. Dedupe by customer id.
-      const seen = new Set<string>()
-      const list: ThreadItem[] = []
+      // Sidebar shows one row per customer. For each customer, we pick the
+      // BEST-representative conversation for the preview — prefer the
+      // salesperson↔customer thread (that's the real business chat admin
+      // wants to see); fall back to admin↔customer only if no SP thread
+      // exists. Unread counts and message totals are summed across ALL
+      // conversations tied to that customer.
+      type Agg = { pref: ThreadItem; sawSp: boolean }
+      const byCustomer = new Map<string, Agg>()
+
       for (const c of (adminConvData?.conversations || [])) {
         const cust = c.userA.role === 'customer' ? c.userA : c.userB.role === 'customer' ? c.userB : null
         if (!cust) continue
-        if (seen.has(cust.id)) continue
-        seen.add(cust.id)
         const other = c.userA.id === cust.id ? c.userB : c.userA
-        list.push({
-          otherUserId: cust.id,          // admin replies TO the customer
+        const isSpThread = other.role === 'salesperson'
+
+        const row: ThreadItem = {
+          otherUserId: cust.id,
           otherName: cust.Name,
           otherRole: 'customer',
           lastMessage: {
@@ -72,11 +78,39 @@ export const MessagesPage = () => {
             mine: false,
           },
           unread: c.unread,
-          spName: other.role === 'salesperson' ? other.Name : undefined,
-          spId: other.role === 'salesperson' ? other.id : undefined,
-        })
+          spName: isSpThread ? other.Name : undefined,
+          spId: isSpThread ? other.id : undefined,
+        }
+
+        const existing = byCustomer.get(cust.id)
+        if (!existing) {
+          byCustomer.set(cust.id, { pref: row, sawSp: isSpThread })
+        } else {
+          // Aggregate unread across every conversation this customer has
+          existing.pref.unread += c.unread
+          // Prefer the SP conversation for preview; if we haven't seen SP
+          // yet and this row is SP, swap it in.
+          if (isSpThread && !existing.sawSp) {
+            const carriedUnread = existing.pref.unread
+            row.unread = carriedUnread
+            existing.pref = row
+            existing.sawSp = true
+          } else if (isSpThread && existing.sawSp) {
+            // Two SP conversations for one customer — pick the newer one
+            if (new Date(row.lastMessage.createdAt) > new Date(existing.pref.lastMessage.createdAt)) {
+              const carriedUnread = existing.pref.unread
+              row.unread = carriedUnread
+              existing.pref = row
+            }
+          }
+          // If existing already the SP row, keep it; still accumulated unread
+        }
       }
-      return list
+
+      // Sort by most-recent preview
+      return Array.from(byCustomer.values())
+        .map((a) => a.pref)
+        .sort((x, y) => new Date(y.lastMessage.createdAt).getTime() - new Date(x.lastMessage.createdAt).getTime())
     }
     const threads = threadsData?.threads || []
     if (threads.length > 0) return threads
