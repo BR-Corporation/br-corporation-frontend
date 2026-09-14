@@ -1,13 +1,54 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { dashboardsApi } from '../../api'
+import { Link, useNavigate } from 'react-router-dom'
+import { dashboardsApi, notificationsApi } from '../../api'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
 import { Badge } from '../../components/status/StatusBadge'
 import {
   ShoppingCart, FileText, CreditCard, ArrowRight, Sparkles, Package, RotateCcw,
+  Bell, MessageCircle, IndianRupee, PackagePlus,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+
+const notifIcon = (type: string) => {
+  if (type === 'order_created' || type === 'order_confirmed' || type === 'order_completed') return ShoppingCart
+  if (type === 'quotation_created' || type === 'quotation_sent' || type === 'quotation_requested') return FileText
+  if (type === 'return_approved' || type === 'return_completed' || type === 'return_rejected') return RotateCcw
+  if (type === 'payment_refunded' || type === 'payment_received') return IndianRupee
+  if (type === 'message_received') return MessageCircle
+  if (type === 'product_created') return PackagePlus
+  return Bell
+}
+const notifTone = (type: string) => {
+  if (type === 'order_completed' || type === 'return_completed' || type === 'quotation_created') return 'bg-emerald-50 text-emerald-700'
+  if (type === 'return_rejected' || type === 'order_cancelled') return 'bg-rose-50 text-rose-700'
+  if (type === 'payment_refunded') return 'bg-amber-50 text-amber-700'
+  if (type === 'message_received') return 'bg-brand-50 text-brand-700'
+  if (type === 'product_created') return 'bg-sky-50 text-sky-700'
+  return 'bg-gray-100 text-gray-700'
+}
+const linkFor = (n: any) => {
+  const ref = (n.referenceEntity || '').toLowerCase()
+  const id = n.referenceId
+  if (!id) return '/customer/notifications'
+  if (ref === 'order') return `/customer/orders/${id}`
+  if (ref === 'quotation') return `/customer/quotations/${id}`
+  if (ref === 'quotationrequest') return `/customer/quotation-requests`
+  if (ref === 'orderreturn') return `/customer/returns/${id}`
+  if (ref === 'product') return `/customer/products`
+  if (ref === 'message') return `/customer/messages`
+  if (ref === 'payment') return `/customer/payments`
+  return '/customer/notifications'
+}
+const timeAgo = (iso: string) => {
+  const d = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(d / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
 
 const StatTile = ({
   icon: Icon, label, value, tone,
@@ -36,6 +77,7 @@ const StatTile = ({
 
 export const CustomerDashboard = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const customerProfileId = user?.customerProfileId
 
   const { data, isLoading } = useQuery({
@@ -47,6 +89,14 @@ export const CustomerDashboard = () => {
     },
     enabled: !!customerProfileId,
   })
+
+  const { data: notifData } = useQuery({
+    queryKey: ['customerNotifications'],
+    queryFn: async () => notificationsApi.getNotifications({ limit: 20 }),
+    refetchInterval: 15_000,
+  })
+  const notifications: any[] = notifData?.notifications || []
+  const unread = notifications.filter((n) => !n.isRead).length
 
   if (isLoading) return <LoadingState message="Loading your dashboard…" />
 
@@ -181,6 +231,56 @@ export const CustomerDashboard = () => {
           </CardBody>
         </Card>
       </div>
+
+      {/* Notifications */}
+      <Card>
+        <CardBody>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-brand-50 text-brand-700 grid place-items-center">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900">Notifications</h3>
+                <p className="text-xs text-gray-500">
+                  {unread > 0 ? `${unread} unread` : 'You\'re all caught up'}
+                </p>
+              </div>
+            </div>
+            <Link to="/customer/notifications" className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
+              See all <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-6">Nothing new yet. New quotations, order updates, refunds and messages will appear here.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {notifications.slice(0, 8).map((n: any) => {
+                const Icon = notifIcon(n.type)
+                return (
+                  <li
+                    key={n.id}
+                    onClick={() => navigate(linkFor(n))}
+                    className={`py-3 flex items-start gap-3 cursor-pointer hover:bg-surface-50 -mx-2 px-2 rounded-lg ${!n.isRead ? 'bg-brand-50/30' : ''}`}
+                  >
+                    <span className={`h-9 w-9 shrink-0 rounded-lg grid place-items-center ${notifTone(n.type)}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-sm ${n.isRead ? 'text-gray-700' : 'text-gray-900 font-semibold'}`}>{n.title || n.type}</p>
+                        {!n.isRead && <Badge variant="brand">New</Badge>}
+                      </div>
+                      {n.message && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>}
+                    </div>
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">{timeAgo(n.createdAt)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
