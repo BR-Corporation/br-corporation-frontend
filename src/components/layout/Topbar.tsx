@@ -17,6 +17,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
   const { data: summary } = useQuery({
     queryKey: ['notificationSummary'],
     queryFn: async () => notificationsApi.getNotificationSummary(),
+    refetchInterval: 15_000,
   })
 
   const unreadCount = summary?.unread || 0
@@ -28,6 +29,11 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
     const role = user?.role || 'admin'
     const target = role === 'customer' ? `/customer/products` : `/${role}/customers`
     navigate(`${target}?q=${encodeURIComponent(q)}`)
+  }
+
+  const openNotifications = () => {
+    const role = user?.role || 'admin'
+    navigate(`/${role}/notifications`)
   }
 
   return (
@@ -57,7 +63,9 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
+            type="button"
             aria-label="Notifications"
+            onClick={openNotifications}
             className="relative p-2 sm:p-2.5 rounded-full text-gray-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
           >
             <Bell className="h-5 w-5" />

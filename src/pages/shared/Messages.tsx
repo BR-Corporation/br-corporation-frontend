@@ -246,13 +246,24 @@ export const MessagesPage = () => {
                   )}
                   {(threadData?.messages || []).map((m: any) => {
                     const mine = isMineMsg(m)
-                    const viaAdmin = !!m.authorId && m.authorRole === 'admin'
+                    const viaAdmin = m.authorRole === 'admin'
+                    // Admin oversight: show a label on every non-mine bubble so
+                    // admin can tell SP messages from customer messages. Other
+                    // roles only need the via-admin chip for admin injections.
+                    const showAuthor = isAdmin || viaAdmin
                     return (
                       <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${mine ? 'gradient-brand text-white rounded-br-sm' : 'bg-white border border-gray-100 text-gray-900 rounded-bl-sm'}`}>
-                          {viaAdmin && (
-                            <p className={`text-[10px] font-semibold flex items-center gap-1 mb-0.5 ${mine ? 'text-white/90' : 'text-amber-700'}`}>
-                              <ShieldCheck className="h-3 w-3" /> via admin {m.authorName ? `· ${m.authorName}` : ''}
+                          {showAuthor && (
+                            <p className={`text-[10px] font-semibold flex items-center gap-1 mb-0.5 ${
+                              mine ? 'text-white/90' :
+                              viaAdmin ? 'text-amber-700' :
+                              m.authorRole === 'customer' ? 'text-brand-700' :
+                              'text-emerald-700'
+                            }`}>
+                              {viaAdmin && <ShieldCheck className="h-3 w-3" />}
+                              {viaAdmin ? 'via admin' : `via ${m.authorRole || 'user'}`}
+                              {m.authorName ? ` · ${m.authorName}` : ''}
                             </p>
                           )}
                           <p className="whitespace-pre-wrap">{m.text}</p>
