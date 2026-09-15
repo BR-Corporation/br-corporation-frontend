@@ -4,13 +4,12 @@ import { DataTable } from '../../components/tables/DataTable'
 import { Button } from '../../components/common/Button'
 import { Badge } from '../../components/status/StatusBadge'
 import { useNavigate } from 'react-router-dom'
-import { CreateOrderModal, RecordPaymentModal } from '../../components/modals'
+import { RecordPaymentModal } from '../../components/modals'
 import { ordersApi } from '../../api'
 
 export const SalespersonOrders = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showOrderModal, setShowOrderModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState('')
   const [error, setError] = useState('')
@@ -137,7 +136,7 @@ export const SalespersonOrders = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold text-gray-900">Orders</h1>
-        <Button onClick={() => setShowOrderModal(true)}>New Order</Button>
+        <p className="text-sm text-gray-500">Orders arrive when your customer accepts a quotation.</p>
       </div>
 
       {error && (
@@ -154,7 +153,6 @@ export const SalespersonOrders = () => {
         />
       </div>
 
-      <CreateOrderModal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} />
       <RecordPaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setSelectedOrderId(''); }} orderId={selectedOrderId} />
     </div>
   )

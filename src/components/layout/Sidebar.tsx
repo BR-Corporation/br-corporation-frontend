@@ -39,11 +39,8 @@ const navItems = {
   ],
   manager: [
     { to: '/manager/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/manager/quotation-requests', icon: FileText, label: 'Quotation requests' },
     { to: '/manager/products', icon: Package, label: 'Products' },
     { to: '/manager/inventory', icon: Box, label: 'Inventory' },
-    { to: '/manager/performance', icon: BarChart3, label: 'Team performance' },
-    { to: '/manager/reports', icon: FileBarChart, label: 'Reports' },
     { to: '/manager/notifications', icon: Bell, label: 'Notifications' },
   ],
   salesperson: [
@@ -53,7 +50,6 @@ const navItems = {
     { to: '/salesperson/quotation-requests', icon: FileText, label: 'Quotation requests' },
     { to: '/salesperson/quotations', icon: FileText, label: 'Quotations' },
     { to: '/salesperson/orders', icon: ShoppingCart, label: 'Orders' },
-    { to: '/salesperson/payments', icon: CreditCard, label: 'Payments' },
     { to: '/salesperson/products', icon: Package, label: 'Products' },
     { to: '/salesperson/performance', icon: BarChart3, label: 'Performance' },
     { to: '/salesperson/notifications', icon: Bell, label: 'Notifications' },

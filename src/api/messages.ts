@@ -15,4 +15,7 @@ export const messagesApi = {
   // Admin: full merged view of a customer's conversation (SP + all admins)
   getCustomerConversation: async (customerUserId: string) =>
     (await apiClient.get(`/messages/admin/customer/${customerUserId}`)).data,
+
+  clearThread: async (otherUserId: string) =>
+    (await apiClient.delete(`/messages/thread/${otherUserId}`)).data,
 }

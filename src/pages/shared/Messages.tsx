@@ -4,7 +4,7 @@ import { messagesApi, customersApi } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
-import { Send, MessageCircle, ShieldCheck } from 'lucide-react'
+import { Send, MessageCircle, ShieldCheck, Trash2 } from 'lucide-react'
 
 type ThreadItem = {
   otherUserId: string     // the party admin/sender replies TO (customer for admin oversight)
@@ -162,6 +162,23 @@ export const MessagesPage = () => {
     onError: (err: any) => alert(err?.response?.data?.message || 'Failed to send.'),
   })
 
+  const clear = useMutation({
+    mutationFn: () => messagesApi.clearThread(activeOtherId!),
+    onSuccess: (res: any) => {
+      alert(`Chat cleared — ${res?.deleted || 0} message${res?.deleted === 1 ? '' : 's'} deleted.`)
+      if (isAdmin) {
+        queryClient.invalidateQueries({ queryKey: ['adminCustomerConversation', activeOtherId] })
+        queryClient.invalidateQueries({ queryKey: ['adminAllConversations'] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['messageThread', activeOtherId] })
+        queryClient.invalidateQueries({ queryKey: ['messageThreads'] })
+      }
+    },
+    onError: (err: any) => alert(err?.response?.data?.message || 'Failed to clear chat.'),
+  })
+
+  const canClear = user?.role === 'admin' || user?.role === 'customer'
+
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })
   }, [threadData?.messages?.length])
@@ -232,12 +249,28 @@ export const MessagesPage = () => {
               </div>
             ) : (
               <>
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="font-semibold text-gray-900">{activeContact?.otherName || threadData?.other?.Name || '—'}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {activeContact?.otherRole || threadData?.other?.role || ''}
-                    {activeContact?.spName ? ` · with salesperson ${activeContact.spName}` : ''}
-                  </p>
+                <div className="px-4 py-3 border-b border-gray-100 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{activeContact?.otherName || threadData?.other?.Name || '—'}</p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {activeContact?.otherRole || threadData?.other?.role || ''}
+                      {activeContact?.spName ? ` · with salesperson ${activeContact.spName}` : ''}
+                    </p>
+                  </div>
+                  {canClear && activeOtherId && (
+                    <button
+                      type="button"
+                      disabled={clear.isPending}
+                      onClick={() => {
+                        if (confirm('Clear this entire chat? This deletes every message on both sides and cannot be undone.')) {
+                          clear.mutate()
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-full px-3 py-1.5 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Clear chat
+                    </button>
+                  )}
                 </div>
 
                 <div ref={scrollerRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-surface-50">

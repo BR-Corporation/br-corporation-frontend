@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { productsApi, quotationRequestsApi } from '../../api'
+import { productsApi } from '../../api'
 import { LoadingState } from '../../components/common/LoadingState'
 import { Card, CardBody } from '../../components/common/Card'
-import { Button } from '../../components/common/Button'
 import { Badge } from '../../components/status/StatusBadge'
 import { getImageUrl } from '../../api/client'
 import {
-  Boxes, PackageOpen, PackageX, ArrowRight, ImageOff, FileText, Sparkles,
+  Boxes, PackageOpen, PackageX, ArrowRight, ImageOff, FileText,
 } from 'lucide-react'
 
 export const ManagerDashboard = () => {
@@ -21,15 +20,7 @@ export const ManagerDashboard = () => {
     refetchInterval: 30_000,
   })
 
-  const { data: requestsData } = useQuery({
-    queryKey: ['quotationRequests'],
-    queryFn: async () => quotationRequestsApi.list(),
-    refetchInterval: 20_000,
-  })
-
   const products: any[] = productsData?.products || []
-  const requests: any[] = requestsData?.requests || []
-  const pendingForMe = requests.filter((r) => r.status === 'pending_manager')
 
   const stats = useMemo(() => {
     const total = products.length
@@ -60,23 +51,6 @@ export const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Pending quotation requests banner */}
-      {pendingForMe.length > 0 && (
-        <div className="rounded-2xl gradient-brand-subtle border border-brand-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-white text-brand-700 grid place-items-center shadow-sm">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-display text-lg font-bold text-gray-900">
-                {pendingForMe.length} quotation request{pendingForMe.length === 1 ? '' : 's'} waiting for you
-              </p>
-              <p className="text-sm text-gray-600">Salespeople forwarded these to you. Prepare quotations to send back.</p>
-            </div>
-          </div>
-          <Button onClick={() => navigate('/manager/quotation-requests')}>Open requests</Button>
-        </div>
-      )}
 
       {/* Headline tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -178,61 +152,17 @@ export const ManagerDashboard = () => {
         </CardBody>
       </Card>
 
-      {/* Two-column: product mix + recent pending requests */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardBody>
-            <h3 className="font-display text-lg font-bold text-gray-900 mb-4">Product status</h3>
-            <div className="space-y-3">
-              <StatusRow tone="emerald" label="Active" value={stats.active} total={stats.total} />
-              <StatusRow tone="gray" label="Inactive" value={stats.total - stats.active} total={stats.total} />
-              <StatusRow tone="amber" label="Low stock" value={stats.low} total={stats.total} />
-              <StatusRow tone="rose" label="Out of stock" value={stats.out} total={stats.total} />
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-lg font-bold text-gray-900">Quotation requests</h3>
-              <button
-                onClick={() => navigate('/manager/quotation-requests')}
-                className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-              >
-                Open all <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {requests.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">No requests yet.</p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {requests.slice(0, 5).map((r) => (
-                  <li
-                    key={r._id}
-                    onClick={() => navigate('/manager/quotation-requests')}
-                    className="py-3 flex items-center justify-between gap-2 cursor-pointer hover:bg-surface-50 -mx-2 px-2 rounded-lg"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">#{String(r._id).slice(-6)} · {r.customerProfile?.businessName || '—'}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{r.items?.length || 0} item(s) · {new Date(r.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <Badge
-                      variant={
-                        r.status === 'quoted' ? 'success' :
-                        r.status === 'rejected' ? 'danger' :
-                        r.status === 'pending_manager' ? 'info' : 'warning'
-                      }
-                    >
-                      {r.status.replace(/_/g, ' ')}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+      <Card>
+        <CardBody>
+          <h3 className="font-display text-lg font-bold text-gray-900 mb-4">Product status</h3>
+          <div className="space-y-3">
+            <StatusRow tone="emerald" label="Active" value={stats.active} total={stats.total} />
+            <StatusRow tone="gray" label="Inactive" value={stats.total - stats.active} total={stats.total} />
+            <StatusRow tone="amber" label="Low stock" value={stats.low} total={stats.total} />
+            <StatusRow tone="rose" label="Out of stock" value={stats.out} total={stats.total} />
+          </div>
+        </CardBody>
+      </Card>
     </div>
   )
 }
